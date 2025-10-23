@@ -51,6 +51,11 @@ async def call_agent(human_message: str):
                 yield msg_chunk.content
 
 
+def call_agent_agui(human_message: str):
+    # TODO: Implement a new response generator that will yield AG-UI protocols
+    pass
+
+
 # for stream_mode, content in agent.stream(
 #     init_state, stream_mode=["updates", "messages"]
 # ):
