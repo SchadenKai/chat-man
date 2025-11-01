@@ -5,6 +5,7 @@ description = "Backend server of the AG-UI testing application"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "ag-ui-protocol>=0.1.9",
     "clerk-backend-api>=3.3.1",
     "fastapi[standard]>=0.119.0",
     "langchain>=0.3.27",

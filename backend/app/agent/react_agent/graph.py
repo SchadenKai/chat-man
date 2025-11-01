@@ -1,4 +1,5 @@
 from typing import cast
+import uuid
 from langchain_core.messages import AIMessage, SystemMessage, BaseMessage
 
 from langchain_openai import ChatOpenAI
@@ -12,6 +13,15 @@ from app.agent.react_agent.nodes import agent_node, router_function
 from app.agent.react_agent.prompts import few_shot_examples
 from app.agent.react_agent.context import AppContext
 from app.config import OPENAI_API_KEY
+from ag_ui.encoder import EventEncoder
+from ag_ui.core import (
+    EventType,
+    RunStartedEvent,
+    RunFinishedEvent,
+    TextMessageStartEvent,
+    TextMessageContentEvent,
+    TextMessageEndEvent,
+)
 
 llm = ChatOpenAI(
     api_key=OPENAI_API_KEY,
@@ -30,7 +40,21 @@ graph.add_edge("tool_node", "agent_node")
 agent = graph.compile()
 
 
-async def call_agent(human_message: str):
+async def call_agent(human_message: str, encoder: EventEncoder, thread_id: str = None, run_id: str = None):
+    # Use provided thread_id and run_id from AG-UI, or generate them
+    if thread_id is None:
+        thread_id = str(uuid.uuid4())
+    if run_id is None:
+        run_id = str(uuid.uuid4())
+
+    yield encoder.encode(
+        RunStartedEvent(
+            type=EventType.RUN_STARTED,
+            run_id=run_id,
+            thread_id=thread_id,
+        )
+    )
+
     SYSTEM_PROMPT = "You are a helpful agent. You have the ability to do ReACT LLM flow where you can iterate between tool calls, reasoning to yourself, and exting with the final answer. If you need further thinking rather than just executing a tool, you can reply 'FURTHER THINKING' to trigger a reasoining loop"
     init_state = AgentState(
         messages=[
@@ -41,6 +65,10 @@ async def call_agent(human_message: str):
     )
     runtime_context_config = AppContext(llm=llm, system_prompt=SYSTEM_PROMPT)
 
+    # Generate a message ID for the assistant's response
+    message_id = str(uuid.uuid4())
+    message_started = False
+
     for stream_mode, content in agent.stream(
         init_state, context=runtime_context_config, stream_mode=["updates", "messages"]
     ):
@@ -48,7 +76,42 @@ async def call_agent(human_message: str):
             msg_chunk, metadata = content
             msg_chunk = cast(BaseMessage, msg_chunk)
             if msg_chunk.content:
-                yield msg_chunk.content
+                # Send TEXT_MESSAGE_START event on first chunk
+                if not message_started:
+                    yield encoder.encode(
+                        TextMessageStartEvent(
+                            type=EventType.TEXT_MESSAGE_START,
+                            message_id=message_id,
+                            role="assistant",
+                        )
+                    )
+                    message_started = True
+
+                # Send TEXT_MESSAGE_CONTENT event for each chunk
+                yield encoder.encode(
+                    TextMessageContentEvent(
+                        type=EventType.TEXT_MESSAGE_CONTENT,
+                        message_id=message_id,
+                        delta=str(msg_chunk.content),
+                    )
+                )
+
+    # Send TEXT_MESSAGE_END event after streaming completes
+    if message_started:
+        yield encoder.encode(
+            TextMessageEndEvent(
+                type=EventType.TEXT_MESSAGE_END,
+                message_id=message_id,
+            )
+        )
+
+    yield encoder.encode(
+        RunFinishedEvent(
+            type=EventType.RUN_FINISHED,
+            run_id=run_id,
+            thread_id=thread_id,
+        )
+    )
 
 
 # for stream_mode, content in agent.stream(

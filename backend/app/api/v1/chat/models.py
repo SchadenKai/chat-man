@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from ag_ui.core import RunAgentInput
 
 
 class SendMessagePost(BaseModel):

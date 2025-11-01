@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader2 } from "lucide-react";
+import { HttpAgent, type AgentSubscriber, type Message as AgentMessage } from "@ag-ui/client";
 
 interface Message {
   id: number;
@@ -8,12 +9,17 @@ interface Message {
   isStreaming?: boolean;
 }
 
-interface ChatRequest {
-  message: string;
-  history?: Message[];
-}
-
 export default function AIChatWithStreaming() {
+  // Initialize HttpAgent
+  const agentRef = useRef<HttpAgent>(
+    new HttpAgent({
+      url: "http://127.0.0.1:8000/v1/chat/send-message",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+  );
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -24,7 +30,7 @@ export default function AIChatWithStreaming() {
   const [input, setInput] = useState<string>("");
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const currentBotMsgIdRef = useRef<number | null>(null);
 
   const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,6 +56,7 @@ export default function AIChatWithStreaming() {
 
     // Add bot message placeholder
     const botMsgId = userMsgId + 1;
+    currentBotMsgIdRef.current = botMsgId;
     setMessages((prev) => [
       ...prev,
       {
@@ -61,60 +68,57 @@ export default function AIChatWithStreaming() {
     ]);
 
     setIsStreaming(true);
-    abortControllerRef.current = new AbortController();
 
-    try {
-      const response = await fetch("http://127.0.0.1:8000/v1/chat/send-message", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          assistant_id: 0,
-          message: userMessage,
-          // history: messages,
-        } as ChatRequest),
-        signal: abortControllerRef.current.signal,
-      });
+    // Build AG-UI compatible messages array
+    const agentMessages: AgentMessage[] = messages
+      .filter((msg) => msg.role !== "bot" || msg.id === 1) // Include initial bot message and all user messages
+      .map((msg) => ({
+        id: msg.id.toString(),
+        role: msg.role === "user" ? ("user" as const) : ("assistant" as const),
+        content: msg.content,
+      }));
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    // Add the new user message
+    agentMessages.push({
+      id: userMsgId.toString(),
+      role: "user" as const,
+      content: userMessage,
+    });
 
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("Response body is not readable");
-      }
+    // Set messages on the agent
+    agentRef.current.setMessages(agentMessages);
 
-      const decoder = new TextDecoder();
-      let accumulatedContent = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        accumulatedContent += chunk;
-
-        // Update the bot message with accumulated content
+    // Create AG-UI subscriber to handle events
+    const subscriber: AgentSubscriber = {
+      onTextMessageContentEvent: ({ textMessageBuffer }) => {
+        // Handle streaming text content - use textMessageBuffer for accumulated text
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === botMsgId) {
+              return {
+                ...msg,
+                content: textMessageBuffer || "",
+              };
+            }
+            return msg;
+          })
+        );
+      },
+      onRunStartedEvent: (event) => {
+        console.log("Run started:", event);
+      },
+      onRunFinishedEvent: (event) => {
+        console.log("Run finished:", event);
+        // Mark streaming as complete
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === botMsgId ? { ...msg, content: accumulatedContent } : msg
+            msg.id === botMsgId ? { ...msg, isStreaming: false } : msg
           )
         );
-      }
-
-      // Mark streaming as complete
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === botMsgId ? { ...msg, isStreaming: false } : msg
-        )
-      );
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        console.log("Stream aborted");
-      } else {
-        console.error("Streaming error:", error);
+        setIsStreaming(false);
+      },
+      onRunErrorEvent: (event) => {
+        console.error("Agent error:", event);
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === botMsgId
@@ -126,10 +130,27 @@ export default function AIChatWithStreaming() {
               : msg
           )
         );
-      }
-    } finally {
+        setIsStreaming(false);
+      },
+    };
+
+    try {
+      // Run the agent with AG-UI protocol
+      await agentRef.current.runAgent({}, subscriber);
+    } catch (error) {
+      console.error("Agent execution error:", error);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === botMsgId
+            ? {
+                ...msg,
+                content: "Sorry, I encountered an error. Please try again.",
+                isStreaming: false,
+              }
+            : msg
+        )
+      );
       setIsStreaming(false);
-      abortControllerRef.current = null;
     }
   };
 
