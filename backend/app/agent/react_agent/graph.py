@@ -1,4 +1,4 @@
-from typing import cast
+from typing import AsyncGenerator, cast
 import uuid
 from langchain_core.messages import AIMessage, SystemMessage, BaseMessage
 
@@ -21,6 +21,7 @@ from ag_ui.core import (
     TextMessageStartEvent,
     TextMessageContentEvent,
     TextMessageEndEvent,
+    BaseEvent
 )
 
 llm = ChatOpenAI(
@@ -40,7 +41,7 @@ graph.add_edge("tool_node", "agent_node")
 agent = graph.compile()
 
 
-async def call_agent(human_message: str, encoder: EventEncoder, thread_id: str = None, run_id: str = None):
+async def call_agent(human_message: str, encoder: EventEncoder, thread_id: str = None, run_id: str = None) -> AsyncGenerator[BaseEvent, None]:
     # Use provided thread_id and run_id from AG-UI, or generate them
     if thread_id is None:
         thread_id = str(uuid.uuid4())
@@ -69,7 +70,7 @@ async def call_agent(human_message: str, encoder: EventEncoder, thread_id: str =
     message_id = str(uuid.uuid4())
     message_started = False
 
-    for stream_mode, content in agent.stream(
+    async for stream_mode, content in agent.astream(
         init_state, context=runtime_context_config, stream_mode=["updates", "messages"]
     ):
         if stream_mode == "messages":

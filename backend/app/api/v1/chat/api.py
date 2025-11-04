@@ -9,7 +9,7 @@ router = APIRouter(prefix="/chat")
 
 
 @router.post("/send-message")
-def send_message(input_data: RunAgentInput):
+async def send_message(input_data: RunAgentInput):
     """
     AG-UI compatible endpoint that accepts RunAgentInput and streams back AG-UI events.
 
