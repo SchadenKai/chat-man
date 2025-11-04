@@ -1,16 +1,16 @@
 from typing import AsyncGenerator, cast
 import uuid
-from langchain_core.messages import AIMessage, SystemMessage, BaseMessage
+from langchain_core.messages import AIMessage, SystemMessage, BaseMessage, HumanMessage
 
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START
 from langgraph.prebuilt import ToolNode
-
+from langchain_core.language_models import BaseChatModel
 
 from app.agent.react_agent.tools import TOOLS
 from app.agent.react_agent.states import AgentState
 from app.agent.react_agent.nodes import agent_node, router_function
-from app.agent.react_agent.prompts import few_shot_examples
+from app.agent.react_agent.prompts import REACT_AGENT_SYSTEM_PROMPT
 from app.agent.react_agent.context import AppContext
 from app.config import OPENAI_API_KEY
 from ag_ui.encoder import EventEncoder
@@ -22,11 +22,6 @@ from ag_ui.core import (
     TextMessageContentEvent,
     TextMessageEndEvent,
     BaseEvent
-)
-
-llm = ChatOpenAI(
-    api_key=OPENAI_API_KEY,
-    model="gpt-4o-mini",
 )
 
 graph = StateGraph(state_schema=AgentState)
@@ -41,7 +36,7 @@ graph.add_edge("tool_node", "agent_node")
 agent = graph.compile()
 
 
-async def call_agent(human_message: str, encoder: EventEncoder, thread_id: str = None, run_id: str = None) -> AsyncGenerator[BaseEvent, None]:
+async def call_agent(human_message: str, llm: BaseChatModel, encoder: EventEncoder, thread_id: str = None, run_id: str = None) -> AsyncGenerator[BaseEvent, None]:
     # Use provided thread_id and run_id from AG-UI, or generate them
     if thread_id is None:
         thread_id = str(uuid.uuid4())
@@ -56,15 +51,13 @@ async def call_agent(human_message: str, encoder: EventEncoder, thread_id: str =
         )
     )
 
-    SYSTEM_PROMPT = "You are a helpful agent. You have the ability to do ReACT LLM flow where you can iterate between tool calls, reasoning to yourself, and exting with the final answer. If you need further thinking rather than just executing a tool, you can reply 'FURTHER THINKING' to trigger a reasoining loop"
     init_state = AgentState(
         messages=[
-            SystemMessage(content=SYSTEM_PROMPT),
-            *few_shot_examples,
-            AIMessage(content=human_message),
+            SystemMessage(content=REACT_AGENT_SYSTEM_PROMPT),
+            HumanMessage(content=human_message),
         ]
     )
-    runtime_context_config = AppContext(llm=llm, system_prompt=SYSTEM_PROMPT)
+    runtime_context_config = AppContext(llm=llm, system_prompt=REACT_AGENT_SYSTEM_PROMPT)
 
     # Generate a message ID for the assistant's response
     message_id = str(uuid.uuid4())

@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
+from app.agent.llm import LLMFactory
 from app.agent.react_agent.graph import call_agent
 from ag_ui.encoder import EventEncoder
 from ag_ui.core import RunAgentInput
@@ -28,7 +29,14 @@ async def send_message(input_data: RunAgentInput):
         last_message = input_data.messages[-1]
         user_message = last_message.content if hasattr(last_message, 'content') else ""
 
+    llm = LLMFactory(
+        model_name="gpt-4o-mini",
+        model_provider="openai",
+        temperature=0.3,
+        max_retries=1
+    )
+    llm = llm.create_chat_model()
     return StreamingResponse(
-        call_agent(user_message, encoder, input_data.thread_id, input_data.run_id),
+        call_agent(human_message=user_message, llm=llm, encoder=encoder, thread_id=input_data.thread_id, run_id=input_data.run_id),
         media_type="text/event-stream"
     )
