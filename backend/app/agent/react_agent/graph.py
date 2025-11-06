@@ -1,8 +1,7 @@
 from typing import AsyncGenerator, cast
 import uuid
-from langchain_core.messages import AIMessage, SystemMessage, BaseMessage, HumanMessage
 
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage
 from langgraph.graph import StateGraph, START
 from langgraph.prebuilt import ToolNode
 from langchain_core.language_models import BaseChatModel
@@ -12,7 +11,6 @@ from app.agent.react_agent.states import AgentState
 from app.agent.react_agent.nodes import agent_node, router_function
 from app.agent.react_agent.prompts import REACT_AGENT_SYSTEM_PROMPT
 from app.agent.react_agent.context import AppContext
-from app.config import OPENAI_API_KEY
 from ag_ui.encoder import EventEncoder
 from ag_ui.core import (
     EventType,
@@ -21,7 +19,7 @@ from ag_ui.core import (
     TextMessageStartEvent,
     TextMessageContentEvent,
     TextMessageEndEvent,
-    BaseEvent
+    BaseEvent,
 )
 
 graph = StateGraph(state_schema=AgentState)
@@ -36,7 +34,14 @@ graph.add_edge("tool_node", "agent_node")
 agent = graph.compile()
 
 
-async def call_agent(human_message: str, llm: BaseChatModel, encoder: EventEncoder, thread_id: str = None, run_id: str = None) -> AsyncGenerator[BaseEvent, None]:
+async def call_agent(
+    messages: list[BaseMessage],
+    human_message: str,
+    llm: BaseChatModel,
+    encoder: EventEncoder,
+    thread_id: str = None,
+    run_id: str = None,
+) -> AsyncGenerator[BaseEvent, None]:
     # Use provided thread_id and run_id from AG-UI, or generate them
     if thread_id is None:
         thread_id = str(uuid.uuid4())
@@ -51,13 +56,11 @@ async def call_agent(human_message: str, llm: BaseChatModel, encoder: EventEncod
         )
     )
 
-    init_state = AgentState(
-        messages=[
-            SystemMessage(content=REACT_AGENT_SYSTEM_PROMPT),
-            HumanMessage(content=human_message),
-        ]
+    messages = [SystemMessage(content=REACT_AGENT_SYSTEM_PROMPT)] + messages
+    init_state = AgentState(messages=messages)
+    runtime_context_config = AppContext(
+        llm=llm, system_prompt=REACT_AGENT_SYSTEM_PROMPT
     )
-    runtime_context_config = AppContext(llm=llm, system_prompt=REACT_AGENT_SYSTEM_PROMPT)
 
     # Generate a message ID for the assistant's response
     message_id = str(uuid.uuid4())
