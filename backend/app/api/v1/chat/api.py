@@ -7,7 +7,6 @@ from ag_ui.encoder import EventEncoder
 from ag_ui.core import RunAgentInput
 
 from app.agent.factory import get_default_llm
-from app.utils import convert_agui_messages_to_langchain
 
 router = APIRouter(prefix="/chat")
 
@@ -34,10 +33,8 @@ async def send_message(
         last_message = input_data.messages[-1]
         user_message = last_message.content if hasattr(last_message, "content") else ""
 
-    messages = convert_agui_messages_to_langchain(input_data.messages)
     return StreamingResponse(
         call_agent(
-            messages=messages,
             human_message=user_message,
             llm=llm,
             encoder=encoder,

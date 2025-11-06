@@ -2,6 +2,8 @@ from typing import AsyncGenerator, cast
 import uuid
 
 from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage
+from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import StateGraph, START
 from langgraph.prebuilt import ToolNode
 from langchain_core.language_models import BaseChatModel
@@ -31,22 +33,26 @@ graph.add_edge(START, "agent_node")
 graph.add_conditional_edges("agent_node", router_function)
 graph.add_edge("tool_node", "agent_node")
 
-agent = graph.compile()
+checkpointer = InMemorySaver()
+
+agent = graph.compile(checkpointer=checkpointer)
 
 
 async def call_agent(
-    messages: list[BaseMessage],
     human_message: str,
     llm: BaseChatModel,
     encoder: EventEncoder,
-    thread_id: str = None,
-    run_id: str = None,
+    thread_id: str = "5dc2ee5a-a752-45a4-9e65-650d06cb118a",
+    run_id: str = "5dc2ee5a-a752-45a4-9e65-650d06cb118a",
 ) -> AsyncGenerator[BaseEvent, None]:
     # Use provided thread_id and run_id from AG-UI, or generate them
     if thread_id is None:
         thread_id = str(uuid.uuid4())
     if run_id is None:
         run_id = str(uuid.uuid4())
+
+    # for checkpoint
+    config: RunnableConfig = RunnableConfig(configurable={"thread_id": thread_id})
 
     yield encoder.encode(
         RunStartedEvent(
@@ -56,7 +62,14 @@ async def call_agent(
         )
     )
 
-    messages = [SystemMessage(content=REACT_AGENT_SYSTEM_PROMPT)] + messages
+    messages = []
+    # Check if there is an existing agent state
+    # If not, add the system prompt
+    existing_agent_state = await agent.aget_state(config=config)
+    if not existing_agent_state.values:
+        messages.append(SystemMessage(content=REACT_AGENT_SYSTEM_PROMPT))
+    messages.append(HumanMessage(content=human_message))
+
     init_state = AgentState(messages=messages)
     runtime_context_config = AppContext(
         llm=llm, system_prompt=REACT_AGENT_SYSTEM_PROMPT
@@ -67,7 +80,10 @@ async def call_agent(
     message_started = False
 
     async for stream_mode, content in agent.astream(
-        init_state, context=runtime_context_config, stream_mode=["updates", "messages"]
+        init_state,
+        config=config,
+        context=runtime_context_config,
+        stream_mode=["updates", "messages"],
     ):
         if stream_mode == "messages":
             msg_chunk, metadata = content
