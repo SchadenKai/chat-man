@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Loader2 } from "lucide-react";
-import { HttpAgent, type AgentSubscriber, type Message as AgentMessage } from "@ag-ui/client";
+import {
+  HttpAgent,
+  type AgentSubscriber,
+  type Message as AgentMessage,
+} from "@ag-ui/client";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   id: number;
@@ -212,7 +218,9 @@ export default function AIChatWithStreaming() {
                 }`}
               >
                 <p className="whitespace-pre-wrap break-words">
-                  {msg.content}
+                  <Markdown remarkPlugins={[remarkGfm]} skipHtml>
+                    {msg.content || (msg.isStreaming ? "..." : "")}
+                  </Markdown>
                   {msg.isStreaming && (
                     <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
                   )}
