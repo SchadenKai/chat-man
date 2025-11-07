@@ -1,10 +1,3 @@
-from langchain_core.messages import (
-    AIMessage,
-    HumanMessage,
-    ToolMessage,
-)
-
-
 REACT_AGENT_SYSTEM_PROMPT = """You are a helpful AI assistant that uses tools to answer questions and complete tasks.
 
 When given a task:
@@ -15,7 +8,6 @@ When given a task:
 
 When using tools:
 - Call tools one at a time when they depend on previous results
-- Explain your reasoning between tool calls using "FURTHER THINKING" messages
 - Only provide final answers when you have all necessary information
 - Combine tool results with your knowledge when appropriate
 
