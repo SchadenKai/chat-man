@@ -1,7 +1,7 @@
 from typing import AsyncGenerator, cast
 import uuid
 
-from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage
+from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage, BaseMessageChunk, AIMessageChunk
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import StateGraph, START
@@ -22,6 +22,11 @@ from ag_ui.core import (
     TextMessageContentEvent,
     TextMessageEndEvent,
     BaseEvent,
+    ToolCallStartEvent,
+    ToolCallArgsEvent,
+    ToolCallEndEvent,
+    ToolCallChunkEvent,
+    ToolCallResultEvent
 )
 
 graph = StateGraph(state_schema=AgentState)
@@ -85,29 +90,77 @@ async def call_agent(
         context=runtime_context_config,
         stream_mode=["updates", "messages"],
     ):
-        if stream_mode == "messages":
-            msg_chunk, metadata = content
-            msg_chunk = cast(BaseMessage, msg_chunk)
-            if msg_chunk.content:
-                # Send TEXT_MESSAGE_START event on first chunk
-                if not message_started:
+        if stream_mode == "updates":
+          for node_name, state in content.items():
+              if node_name == "tool_node":
+                # Get the last message from the state which should be the tool result
+                if state.get("messages"):
+                    last_message = state["messages"][-1]
+                    print("Tool call results: ", last_message)
                     yield encoder.encode(
-                        TextMessageStartEvent(
-                            type=EventType.TEXT_MESSAGE_START,
-                            message_id=message_id,
-                            role="assistant",
+                        ToolCallResultEvent(
+                            type=EventType.TOOL_CALL_RESULT,
+                            content=last_message.content,
+                            tool_call_id=last_message.tool_call_id,
+                            message_id=message_id
                         )
                     )
-                    message_started = True
-
-                # Send TEXT_MESSAGE_CONTENT event for each chunk
-                yield encoder.encode(
-                    TextMessageContentEvent(
-                        type=EventType.TEXT_MESSAGE_CONTENT,
-                        message_id=message_id,
-                        delta=str(msg_chunk.content),
+        elif stream_mode == "messages":
+            msg_chunk, metadata = content
+            node_name = metadata["langgraph_node"]
+            print("EXECUTING NODE: ", node_name)
+            msg_chunk = cast(BaseMessageChunk, msg_chunk)
+            if node_name == "agent_node":
+                msg_chunk = cast(AIMessageChunk, msg_chunk)
+                if msg_chunk.tool_call_chunks:
+                    for tool_call in msg_chunk.tool_calls:
+                        tool_name = tool_call.get("name")
+                        tool_args = tool_call.get("args", {})
+                        tool_id = tool_call.get("id", "")
+                        if not tool_name or not tool_id:
+                            continue
+                        print("Tool name: ", tool_name)
+                        print("Tool args: ", tool_args)
+                        print("Tool id: ", tool_id)
+                        yield encoder.encode(
+                            ToolCallStartEvent(
+                                type=EventType.TOOL_CALL_START,
+                                tool_call_name=tool_name,
+                                tool_call_id=tool_id
+                            )
+                        )
+                        yield encoder.encode(
+                            ToolCallArgsEvent(
+                                type=EventType.TOOL_CALL_ARGS,
+                                tool_call_id=tool_id,
+                                delta=str(tool_args)
+                            )
+                        )
+                        yield encoder.encode(
+                            ToolCallEndEvent(
+                                type=EventType.TOOL_CALL_END,
+                                tool_call_id=tool_id
+                            )
+                        )
+                if msg_chunk.content:
+                    # Send TEXT_MESSAGE_START event on first chunk
+                    if not message_started:
+                        yield encoder.encode(
+                            TextMessageStartEvent(
+                                type=EventType.TEXT_MESSAGE_START,
+                                message_id=message_id,
+                                role="assistant",
+                            )
+                        )
+                        message_started = True
+                    # Send TEXT_MESSAGE_CONTENT event for each chunk
+                    yield encoder.encode(
+                        TextMessageContentEvent(
+                            type=EventType.TEXT_MESSAGE_CONTENT,
+                            message_id=message_id,
+                            delta=str(msg_chunk.content),
+                        )
                     )
-                )
 
     # Send TEXT_MESSAGE_END event after streaming completes
     if message_started:
@@ -125,25 +178,3 @@ async def call_agent(
             thread_id=thread_id,
         )
     )
-
-
-# for stream_mode, content in agent.stream(
-#     init_state, stream_mode=["updates", "messages"]
-# ):
-#     # print("---- RAW RESULTS ----")
-#     if stream_mode == "updates":
-#         for node, state in content.items():
-#             print(node)
-#     if stream_mode == "messages":
-#         # print(content)
-#         msg_chunk, metadata = content
-#         if msg_chunk.content:
-#             print(msg_chunk.content, end="", flush=True)
-# for node, state in event.items():
-#     print(f"Node: {node}")
-#     print(f"Messages: {[msg.content for msg in state['messages']]}")
-#     print("---")
-
-# for message_chunk, metadata in agent.stream(init_state, stream_mode=["messages"]):
-#     if message_chunk.content:
-#         print(message_chunk.content, end="", flush=True)
