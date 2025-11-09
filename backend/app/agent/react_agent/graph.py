@@ -108,7 +108,6 @@ async def call_agent(
         elif stream_mode == "messages":
             msg_chunk, metadata = content
             node_name = metadata["langgraph_node"]
-            print("EXECUTING NODE: ", node_name)
             msg_chunk = cast(BaseMessageChunk, msg_chunk)
             if node_name == "agent_node":
                 msg_chunk = cast(AIMessageChunk, msg_chunk)

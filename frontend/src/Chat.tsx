@@ -4,13 +4,14 @@ import {
 	HttpAgent,
 	type AgentSubscriber,
 	type Message as AgentMessage,
+	EventType,
 } from "@ag-ui/client";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 interface Message {
 	id: number;
-	role: "user" | "bot";
+	role: "user" | "bot" | "tool";
 	content: string;
 	isStreaming?: boolean;
 }
@@ -37,6 +38,7 @@ export default function AIChatWithStreaming() {
 	const [isStreaming, setIsStreaming] = useState<boolean>(false);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const currentBotMsgIdRef = useRef<number | null>(null);
+	const accumulatedTextRef = useRef<string>("");
 
 	const scrollToBottom = (): void => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -97,16 +99,25 @@ export default function AIChatWithStreaming() {
 		// Set messages on the agent
 		agentRef.current.setMessages(agentMessages);
 
+		// Reset accumulated text for new message
+		accumulatedTextRef.current = "";
+
 		// Create AG-UI subscriber to handle events
 		const subscriber: AgentSubscriber = {
-			onTextMessageContentEvent: ({ textMessageBuffer }) => {
-				// Handle streaming text content - use textMessageBuffer for accumulated text
+			onTextMessageContentEvent: ({ event }) => {
+
+				// Manually accumulate text from TEXT_MESSAGE_CONTENT events only
+				if (event.type === EventType.TEXT_MESSAGE_CONTENT) {
+					accumulatedTextRef.current += event.delta || "";
+				}
+
 				setMessages((prev) =>
 					prev.map((msg) => {
-						if (msg.id === botMsgId) {
+						if (msg.id === botMsgId && event.type == EventType.TEXT_MESSAGE_CONTENT) {
 							return {
 								...msg,
-								content: textMessageBuffer || "",
+								// Use our manually accumulated text instead of textMessageBuffer
+								content: accumulatedTextRef.current,
 							};
 						}
 						return msg;
@@ -244,10 +255,7 @@ export default function AIChatWithStreaming() {
 									<Markdown
 										remarkPlugins={[remarkGfm]}
 										skipHtml
-										children={
-											msg.content ||
-											(msg.isStreaming ? "..." : "")
-										}
+										children={msg.content}
 									/>
 									{msg.isStreaming && (
 										<span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
