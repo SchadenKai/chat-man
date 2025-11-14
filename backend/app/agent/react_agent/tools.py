@@ -69,3 +69,5 @@ TOOLS: List[Callable[..., any]] = [
     do_reasoning,
     brave_search_tool_builtin,
 ]
+
+REASONING_TOOL = [do_reasoning]
