@@ -1,7 +1,13 @@
 from typing import AsyncGenerator, cast
 import uuid
 
-from langchain_core.messages import SystemMessage, BaseMessage, HumanMessage, BaseMessageChunk, AIMessageChunk
+from langchain_core.messages import (
+    SystemMessage,
+    BaseMessage,
+    HumanMessage,
+    BaseMessageChunk,
+    AIMessageChunk,
+)
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import StateGraph, START
@@ -25,8 +31,7 @@ from ag_ui.core import (
     ToolCallStartEvent,
     ToolCallArgsEvent,
     ToolCallEndEvent,
-    ToolCallChunkEvent,
-    ToolCallResultEvent
+    ToolCallResultEvent,
 )
 
 graph = StateGraph(state_schema=AgentState)
@@ -91,20 +96,20 @@ async def call_agent(
         stream_mode=["updates", "messages"],
     ):
         if stream_mode == "updates":
-          for node_name, state in content.items():
-              if node_name == "tool_node":
-                # Get the last message from the state which should be the tool result
-                if state.get("messages"):
-                    last_message = state["messages"][-1]
-                    print("Tool call results: ", last_message)
-                    yield encoder.encode(
-                        ToolCallResultEvent(
-                            type=EventType.TOOL_CALL_RESULT,
-                            content=last_message.content,
-                            tool_call_id=last_message.tool_call_id,
-                            message_id=message_id
+            for node_name, state in content.items():
+                if node_name == "tool_node":
+                    # Get the last message from the state which should be the tool result
+                    if state.get("messages"):
+                        last_message = state["messages"][-1]
+                        print("Tool call results: ", last_message)
+                        yield encoder.encode(
+                            ToolCallResultEvent(
+                                type=EventType.TOOL_CALL_RESULT,
+                                content=last_message.content,
+                                tool_call_id=last_message.tool_call_id,
+                                message_id=message_id,
+                            )
                         )
-                    )
         elif stream_mode == "messages":
             msg_chunk, metadata = content
             node_name = metadata["langgraph_node"]
@@ -125,20 +130,19 @@ async def call_agent(
                             ToolCallStartEvent(
                                 type=EventType.TOOL_CALL_START,
                                 tool_call_name=tool_name,
-                                tool_call_id=tool_id
+                                tool_call_id=tool_id,
                             )
                         )
                         yield encoder.encode(
                             ToolCallArgsEvent(
                                 type=EventType.TOOL_CALL_ARGS,
                                 tool_call_id=tool_id,
-                                delta=str(tool_args)
+                                delta=str(tool_args),
                             )
                         )
                         yield encoder.encode(
                             ToolCallEndEvent(
-                                type=EventType.TOOL_CALL_END,
-                                tool_call_id=tool_id
+                                type=EventType.TOOL_CALL_END, tool_call_id=tool_id
                             )
                         )
                 if msg_chunk.content:
