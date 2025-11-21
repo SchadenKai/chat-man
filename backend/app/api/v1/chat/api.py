@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
 from langchain_core.language_models import BaseChatModel
@@ -13,7 +13,8 @@ router = APIRouter(prefix="/chat")
 
 @router.post("/send-message")
 async def send_message(
-    input_data: RunAgentInput, llm: BaseChatModel = Depends(get_default_llm)
+    input_data: RunAgentInput,
+    llm: BaseChatModel = Depends(get_default_llm),
 ):
     """
     AG-UI compatible endpoint that accepts RunAgentInput and streams back AG-UI events.

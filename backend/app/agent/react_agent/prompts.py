@@ -1,5 +1,7 @@
 REACT_AGENT_SYSTEM_PROMPT = """You are a helpful AI assistant that uses tools to answer questions and complete tasks.
 
+Current Time and Date: {current_time}
+
 When given a task:
 1. Break down complex requests into smaller steps
 2. Use available tools systematically to gather information

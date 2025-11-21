@@ -1,9 +1,8 @@
 from typing import AsyncGenerator, cast
 import uuid
-
+from datetime import datetime
 from langchain_core.messages import (
     SystemMessage,
-    BaseMessage,
     HumanMessage,
     BaseMessageChunk,
     AIMessageChunk,
@@ -54,6 +53,7 @@ async def call_agent(
     encoder: EventEncoder,
     thread_id: str = "5dc2ee5a-a752-45a4-9e65-650d06cb118a",
     run_id: str = "5dc2ee5a-a752-45a4-9e65-650d06cb118a",
+    metadata: dict = {},
 ) -> AsyncGenerator[BaseEvent, None]:
     # Use provided thread_id and run_id from AG-UI, or generate them
     if thread_id is None:
@@ -76,8 +76,16 @@ async def call_agent(
     # Check if there is an existing agent state
     # If not, add the system prompt
     existing_agent_state = await agent.aget_state(config=config)
+    print("Current Time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    print("User Location: ", metadata.get("user_location", "Unknown"))
     if not existing_agent_state.values:
-        messages.append(SystemMessage(content=REACT_AGENT_SYSTEM_PROMPT))
+        messages.append(
+            SystemMessage(
+                content=REACT_AGENT_SYSTEM_PROMPT.format(
+                    current_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                )
+            )
+        )
     messages.append(HumanMessage(content=human_message))
 
     init_state = AgentState(messages=messages)
