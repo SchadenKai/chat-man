@@ -6,7 +6,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_community.tools import BraveSearch
 
-from app.config import BRAVE_API_KEY
+from app.core.config import BRAVE_API_KEY
 
 
 def get_weather_update(city: str, date: datetime) -> str:
