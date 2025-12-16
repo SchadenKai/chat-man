@@ -3,3 +3,6 @@ run-dev-backend:
 
 run-dev-frontend:
 	cd frontend && pnpm run dev
+
+run-containers:
+	docker-compose up --build
