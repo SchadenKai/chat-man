@@ -6,6 +6,7 @@ from langchain_openai import ChatOpenAI
 
 _supported_model_providers = Literal["openai", "nebius"]
 
+
 class LLMFactory:
     def __init__(
         self,
@@ -25,7 +26,7 @@ class LLMFactory:
         self.base_url = base_url
         self.max_tokens = max_tokens
         self.timeout = timeout
-        self.max_retries = max_retries
+        self.max_retries = max_retriesp
         self.reasoning_effort = reasoning_effort
         self.streaming = streaming
 
@@ -46,7 +47,7 @@ class LLMFactory:
         if self.reasoning_effort:
             base_kwargs["reasoning_effort"] = self.reasoning_effort
         return base_kwargs
-    
+
     def create_chat_model(self) -> BaseChatModel:
         base_kwargs = self.prepare_base_kwargs()
         print("Base Kwargs: ", base_kwargs)
