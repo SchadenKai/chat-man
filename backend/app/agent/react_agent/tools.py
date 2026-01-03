@@ -5,8 +5,7 @@ from langchain.tools import ToolRuntime
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_community.tools import BraveSearch
-
-from app.core.config import BRAVE_API_KEY
+from app.core.config import settings
 
 
 def get_weather_update(city: str, date: datetime) -> str:
@@ -60,7 +59,7 @@ def do_reasoning(runtime: ToolRuntime) -> str:
 
 
 brave_search_tool_builtin = BraveSearch.from_api_key(
-    api_key=BRAVE_API_KEY, search_kwargs={"count": 5}
+    api_key=settings.brave_api_key, search_kwargs={"count": 5}
 )
 
 TOOLS: List[Callable[..., any]] = [
