@@ -5,4 +5,4 @@ run-dev-frontend:
 	cd frontend && pnpm run dev
 
 run-containers:
-	docker-compose up --build
+	docker-compose up -d --build
