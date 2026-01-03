@@ -26,7 +26,7 @@ class LLMFactory:
         self.base_url = base_url
         self.max_tokens = max_tokens
         self.timeout = timeout
-        self.max_retries = max_retriesp
+        self.max_retries = max_retries
         self.reasoning_effort = reasoning_effort
         self.streaming = streaming
 
