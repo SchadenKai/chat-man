@@ -18,11 +18,10 @@ async def send_message(
     file: UploadFile, vector_db: MilvusClient = Depends(get_milvus_client)
 ):
     """Feed raw documents to store into the vector database. This contains the whole indexing process of the RAG system"""
-    file_obj = file.file
-    if file_obj is None:
+    if file is None:
         raise HTTPException("The file is invalid")
-    print(file_obj.read())
-    return vector_db.list_collections(), vector_db.list_databases()
+    content = await file.read()
+    return str(content)
 
 
 @router.post("/create-database")
