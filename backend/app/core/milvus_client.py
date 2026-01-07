@@ -19,8 +19,13 @@ def create_collection(client: MilvusClient | None = Depends(get_milvus_client)):
         auto_id=True,
         primary_field_name="id",
     )
-    schema = client.create_schema()
-    schema.add_field(field_name="id", datatype=DataType.INT64)
+
+    schema = client.create_schema(
+        enable_dynamic_field=True
+    )
+
+    schema.add_field(field_name="id", datatype=DataType.INT64, is_primary=True, auto_id=True)
+    
 
 
 def get_embedding_model() -> BaseEmbeddingFunction:
