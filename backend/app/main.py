@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from app.core.milvus_client import create_collection, get_milvus_client
+from client.milvus_client import create_collection, get_milvus_client
 from .api.v1.main import api_router as api_router_v1
 from .api.v2.main import api_router as api_router_v2
 

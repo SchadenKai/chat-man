@@ -9,7 +9,6 @@ client = MilvusClient("http://localhost:19530")
 def get_milvus_client() -> MilvusClient:
     return client
 
-
 def create_collection(client: MilvusClient | None = Depends(get_milvus_client)):
     if client.has_collection("demo_collection"):
         return None
@@ -23,9 +22,9 @@ def create_collection(client: MilvusClient | None = Depends(get_milvus_client)):
     schema = client.create_schema(
         enable_dynamic_field=True
     )
-
     schema.add_field(field_name="id", datatype=DataType.INT64, is_primary=True, auto_id=True)
-    
+    schema.add_field(field_name="title", datatype=DataType.VARCHAR)
+    schema.add_field(field_name="link", datatype=DataType.VARCHAR)
 
 
 def get_embedding_model() -> BaseEmbeddingFunction:

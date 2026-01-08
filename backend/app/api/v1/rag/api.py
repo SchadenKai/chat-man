@@ -8,7 +8,7 @@ from ag_ui.encoder import EventEncoder
 from ag_ui.core import RunAgentInput
 
 from app.agent.factory import get_default_llm
-from app.core.milvus_client import get_milvus_client, sample_embedding
+from client.milvus_client import get_milvus_client, sample_embedding
 from langchain_text_splitters import RecursiveCharacterTextSplitter, TokenTextSplitter, MarkdownHeaderTextSplitter, CharacterTextSplitter
 from langchain_core.documents import Document
 
