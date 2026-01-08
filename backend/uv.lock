@@ -23,6 +23,7 @@ dependencies = [
     { name = "clerk-backend-api" },
     { name = "fastapi", extra = ["standard"] },
     { name = "grpcio-tools" },
+    { name = "kagglehub" },
     { name = "langchain" },
     { name = "langchain-classic" },
     { name = "langchain-community" },
@@ -42,6 +43,7 @@ requires-dist = [
     { name = "clerk-backend-api", specifier = ">=3.3.1" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.119.0" },
     { name = "grpcio-tools", specifier = ">=1.76.0" },
+    { name = "kagglehub", specifier = ">=0.3.13" },
     { name = "langchain", specifier = ">=1.0.4" },
     { name = "langchain-classic", specifier = ">=1.0.0" },
     { name = "langchain-community", specifier = ">=0.3.31" },
@@ -846,6 +848,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6a/0a/eebeb1fa92507ea94016a2a790b93c2ae41a7e18778f85471dc54475ed25/jsonpointer-3.0.0.tar.gz", hash = "sha256:2b2d729f2091522d61c3b31f82e11870f60b68f43fbc705cb76bf4b832af59ef", size = 9114, upload-time = "2024-06-10T19:24:42.462Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/71/92/5e77f98553e9e75130c78900d000368476aed74276eb8ae8796f65f00918/jsonpointer-3.0.0-py2.py3-none-any.whl", hash = "sha256:13e088adc14fca8b6aa8177c044e12701e6ad4b28ff10e65f2267a90109c9942", size = 7595, upload-time = "2024-06-10T19:24:40.698Z" },
+]
+
+[[package]]
+name = "kagglehub"
+version = "0.3.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1c/12/e13c1c8b203535b15dacc420c0f1596dda67463175ff1e4404af21815bdd/kagglehub-0.3.13.tar.gz", hash = "sha256:d3c8b6250627d665096cd91a9487559bf5ed61be607eaf63d14511b20eea646e", size = 113694, upload-time = "2025-08-26T16:17:33.486Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/8e/4077b08b95a1f8302c694a8b399bd413815fbe89045c41e6e08cd7d9439a/kagglehub-0.3.13-py3-none-any.whl", hash = "sha256:e00dec8b81396cbad9c7b5eb62a33cf8ae27da26227abd196ed8f054c845ca00", size = 68257, upload-time = "2025-08-26T16:17:32.13Z" },
 ]
 
 [[package]]
