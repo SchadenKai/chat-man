@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
+from langchain_openai import OpenAIEmbeddings
 from pymilvus import MilvusClient
 
+from app.services.rag.inference.retriever import retrieve_relevant_chunks
 from client.milvus_client import get_milvus_client
 from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
@@ -10,6 +12,8 @@ from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
 )
 from langchain_core.documents import Document
+
+from app.services.rag.indexing.bi_encoders import get_bi_encoder_model
 
 router = APIRouter(prefix="/rag")
 
@@ -67,28 +71,11 @@ async def ingest_document(
     docs_chunks = markdown_chunker(content)
 
 
-@router.post("/create-database")
-async def create_database(
-    database_name: str, vector_db: MilvusClient = Depends(get_milvus_client)
-):
-    vector_db.create_database(db_name=database_name)
-    return {
-        "status": "ok",
-        "description": f"Successfully created database name: {database_name}",
-    }
-
-
-@router.post("/switch-database")
-async def switch_database(
-    database_name: str, vector_db: MilvusClient = Depends(get_milvus_client)
-):
-    db_list = vector_db.list_databases()
-    if database_name not in db_list:
-        raise HTTPException(
-            message="The database name is not existing", status_code=404
-        )
-    vector_db.use_database(database_name)
-    return {
-        "status": "ok",
-        "description": f"Succesfully change database being used into {database_name}",
-    }
+@router.post("/vector_search")
+async def vector_search(
+    query: str,
+    encoder: OpenAIEmbeddings = Depends(get_bi_encoder_model),
+    vector_db: MilvusClient = Depends(get_milvus_client),
+) -> dict:
+    chunks = retrieve_relevant_chunks(query=query, encoder=encoder, vector_db=vector_db)
+    return {"chunks": chunks, "total": len(chunks)}
