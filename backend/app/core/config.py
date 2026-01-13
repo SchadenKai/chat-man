@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     # Change default value as needed through .env file
     milvus_uri: Optional[str] = "http://windows-server:19530"
     milvus_db_name: Optional[str] = "chat_man_db"
-    collection_name: Optional[str] = "recipe_rag"
+    collection_name: Optional[str] = "chat_rag"
     postgres_host: Optional[str] = "http://windows-server:5432"
     postgres_db_name: Optional[str] = "chat_man_db"
     postgres_user: Optional[str] = "root"

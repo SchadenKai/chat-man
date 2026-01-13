@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
-from client.milvus_client import create_collection, get_milvus_client
+from client.milvus_client import get_milvus_client, initial_setup
 from .api.v1.main import api_router as api_router_v1
 from .api.v2.main import api_router as api_router_v2
 
@@ -10,7 +10,7 @@ from .api.v2.main import api_router as api_router_v2
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     vector_db = get_milvus_client()
-    create_collection(client=vector_db)
+    initial_setup(vector_db)
     yield
 
 
