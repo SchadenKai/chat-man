@@ -8,11 +8,13 @@ load_dotenv()
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
+    base_dense_vector_dim: Optional[int] = 1536
+
     openai_api_key: Optional[str]
     nebius_api_key: Optional[str]
     brave_api_key: Optional[str]
     gemini_api_key: Optional[str]
-    vector_dimension: Optional[int] = 1536
+    vector_dimension: Optional[int] = base_dense_vector_dim
 
     # Change default value as needed through .env file
     milvus_uri: Optional[str] = "http://windows-server:19530"
@@ -22,6 +24,12 @@ class Settings(BaseSettings):
     postgres_db_name: Optional[str] = "chat_man_db"
     postgres_user: Optional[str] = "root"
     postgres_password: Optional[str] = "password"
+
+    # this outputs normalized vectors
+    bi_encoder_model: Optional[str] = "text-embedding-3-small"
+    encoder_dim: Optional[int] = base_dense_vector_dim
+    # this needs to still be measured whether it is still best to make use of reranking models
+    reranking_model: Optional[str] = ""
 
 
 settings = Settings()
