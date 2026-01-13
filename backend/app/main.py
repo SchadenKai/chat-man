@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
+from app.services.rag.indexing.bi_encoders import get_bi_encoder_model
+from app.utils.load_default_data import load_default_data
 from client.milvus_client import get_milvus_client, initial_setup
 from .api.v1.main import api_router as api_router_v1
 from .api.v2.main import api_router as api_router_v2
@@ -11,6 +13,9 @@ from .api.v2.main import api_router as api_router_v2
 async def lifespan(_: FastAPI):
     vector_db = get_milvus_client()
     initial_setup(vector_db)
+
+    # print("[INFO] Load default dataset for testing")
+    # load_default_data(embed=Depends(get_bi_encoder_model), vector_db=vector_db)
     yield
 
 
